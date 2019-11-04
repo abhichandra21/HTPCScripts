@@ -1,4 +1,3 @@
-OptimusPrime:/opt/htpc-config/nzbget/scripts/deleteRadarr # cat deleteRadarr.py
 #!/usr/bin/env python
 
 #
@@ -21,7 +20,7 @@ OptimusPrime:/opt/htpc-config/nzbget/scripts/deleteRadarr # cat deleteRadarr.py
 #raport=7878
 
 # Radarr API key.
-#raapikey=
+#raapikey=38b9097ad5ba47de9f6e5b62b121486a
 
 # Radarr uses ssl (0, 1).
 #
@@ -31,10 +30,10 @@ OptimusPrime:/opt/htpc-config/nzbget/scripts/deleteRadarr # cat deleteRadarr.py
 # Radarr web_root
 #
 # set this if using a reverse proxy.
-#raweb_root=
+#raweb_root=radarr
 
 ## TMDB
-#tmdbapikey=
+#tmdbapikey=45e408d2851e968e6e4d0353ce621c66
 
 ### NZBGET POST-PROCESSING SCRIPT                                          ###
 ##############################################################################
@@ -50,18 +49,23 @@ import requests
 import json
 from tmdb_api import tmdb
 
-from dotenv import load_dotenv
-load_dotenv(os.path.join('/opt/htpc-config/nzbget/scripts/nzbget.env'))
+#from dotenv import load_dotenv
+#load_dotenv(os.path.join('/opt/htpc-config/nzbget/scripts/nzbget.env'))
+env_var = os.environ
+print("User's Environment variable:")
+pprint.pprint(dict(env_var), width = 1)
 
-radarr_host = os.environ['NZBPP_RAHOST']
-radarr_port = os.environ['NZBPP_RAPORT']
-radarr_webroot = os.environ['NZBPP_RAWEB_ROOT']
-radarr_ssl = os.environ['NZBPP_RASSL']
-radarr_key = os.environ['NZBPP_RAAPIKEY']
-tmdb_api_key = os.environ['NZBPP_TMDBAPIKEY']
+print("Starting PP Script")
+
+radarr_host = os.environ['NZBPO_RAHOST']
+radarr_port = os.environ['NZBPO_RAPORT']
+radarr_webroot = os.environ['NZBPO_RAWEB_ROOT']
+radarr_ssl = os.environ['NZBPO_RASSL']
+radarr_key = os.environ['NZBPO_RAAPIKEY']
+tmdb_api_key = os.environ['NZBPO_TMDBAPIKEY']
 
 # Check if all required script config options are present in config file
-required_options = ('NZBPP_RAHOST', 'NZBPP_RAPORT', 'NZBPP_RAWEB_ROOT', 'NZBPP_RASSL', 'NZBPP_RAAPIKEY', 'NZBPP_TMDBAPIKEY')
+required_options = ('NZBPO_RAHOST', 'NZBPO_RAPORT', 'NZBPO_RAWEB_ROOT', 'NZBPO_RASSL', 'NZBPO_RAAPIKEY', 'NZBPO_TMDBAPIKEY')
 for optname in required_options:
     if (not optname.upper() in os.environ):
         print('[ERROR] Option %s is missing in configuration file. Please check script settings' % optname[6:])
@@ -89,7 +93,7 @@ def tmdbInfo(guessData):
         if foundname.lower() == origname.lower():
             tmdb_title = ''
             tmdbid = 0
-            print("Matched movie title as: %s %s" % (movie["title"].encode(sys.stdout.encoding, errors='ignore'), movie["release_date"].encode(sys.stdout.encoding, errors='ignore')))
+            print("Matched movie title as: %s %s" % (movie["title"], movie["release_date"]))
             movie = tmdb.Movie(movie["id"])
             if isinstance(movie, dict):
                 tmdbid = movie["id"]
@@ -191,7 +195,6 @@ if radarr_id is not None and radarr_id != 0:
         sys.exit(NZBGET_POSTPROCESS_NONE)
     print("Successfully deleted %s" % radarr_title )
 else:
-    print("Movie not found in Radarr: %s[%s]" % (nzb_tmdbtitle, nzb_tmdbid))
+    print("Movie not found in Radarr: [%s]" % (nzb_tmdbid))
 #curl -H 'Accept: application/json' -H 'Content-Type: application/json' -H 'X-Api-Key: 38b9097ad5ba47de9f6e5b62b121486a' -X GET http://127.0.0.1:7878/radarr/api/movie | jq '.[] | select(.tmdbId == 447365) | .id'
 sys.exit(NZBGET_POSTPROCESS_SUCCESS)
-OptimusPrime:/opt/htpc-config/nzbget/scripts/deleteRadarr #
