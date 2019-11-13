@@ -10,7 +10,7 @@
 ### OPTIONS                                                                ###
 
 ## TMDB
-#tmdbapikey=45e408d2851e968e6e4d0353ce621c66
+#tmdbapikey=
 
 # Pushbullet API URL.
 #URL=https://api.pushbullet.com/api/pushes
