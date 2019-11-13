@@ -1,2 +1,1 @@
-# IMDBToSonarr
-Sync Public IMDB RSS To Sonarr
+# HTPC Scripts for automation 
