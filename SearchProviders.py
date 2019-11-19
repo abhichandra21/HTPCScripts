@@ -12,12 +12,11 @@
 ## TMDB
 #tmdbapikey=
 
-# Pushbullet API URL.
-#URL=https://api.pushbullet.com/api/pushes
+# PushOver UserKey
+#UserKey=
 
-# Find your Access Token at <a href="https://www.pushbullet.com/account">https://www.pushbullet.com/account</a>
-#AccessToken=
-
+# PushOver API-Token
+#APIToken=
 
 ### NZBGET QUEUE SCRIPT                                          ###
 ##############################################################################
@@ -28,7 +27,8 @@ from os.path import dirname
 sys.path.insert(1,dirname(__file__) + '/lib')
 
 if os.environ.get('NZBNA_EVENT') not in ['NZB_ADDED']:
-        sys.exit(0)
+    print("Not a valid NZBGET Event")
+    sys.exit(0)
 
 import pprint
 import guessit
@@ -38,23 +38,17 @@ import json
 from tmdb_api import tmdb
 
 from justwatch import JustWatch
+from pushover import init, Client
 
 #from dotenv import load_dotenv
 #load_dotenv(os.path.join('/opt/htpc-config/nzbget/scripts/nzbget.env'))
-#env_var = os.environ
-#print("User's Environment variable:")
-#pprint.pprint(dict(env_var), width = 1)
-
-import urllib
-try:
-        from xmlrpclib import ServerProxy # python 2
-except ImportError:
-        from xmlrpc.client import ServerProxy # python 3
-
+env_var = os.environ
+print("User's Environment variable:")
+pprint.pprint(dict(env_var), width = 1)
 print("Starting SearchProviders PP Script")
 
 def tmdbInfo(guessData):
-    tmdb.configure(tmdb_api_key)
+    tmdb.configure(os.environ['NZBPO_TMDBAPIKEY'])
     #print("Title from guess: %s" % guessData["title"])
     movies = tmdb.Movies(guessData["title"].encode('ascii', errors='ignore'), limit=4)
     #print(movies.get_total_results())
@@ -78,7 +72,6 @@ def tmdbInfo(guessData):
             return tmdbid, tmdb_title
     return None
 
-tmdb_api_key = "45e408d2851e968e6e4d0353ce621c66"
 # Check if all required script config options are present in config file
 required_options = ('NZBPO_TMDBAPIKEY', 'NZBPO_ACCESSTOKEN', 'NZBPO_URL')
 status = 0
@@ -110,7 +103,13 @@ except Exception as e:
     sys.exit(NZBGET_POSTPROCESS_NONE)
 
 just_watch = JustWatch(country='US')
-movies = just_watch.search_for_item(query=nzb_tmdbtitle)
+
+try:
+    movies = just_watch.search_for_item(query=nzb_tmdbtitle)
+except Exception as e:
+    print("Could not determine Streaming Services")
+    sys.exit(NZBGET_POSTPROCESS_NONE)
+
 jw_tmdbid = 0
 jw_provider = None
 
@@ -146,22 +145,11 @@ print("Movie Title: %s | TMDB_ID: %s | Provider: %s" % (nzb_tmdbtitle, jw_tmdbid
 text = "Movie Title: " + nzb_tmdbtitle + " | TMDB_ID: " + str(jw_tmdbid) + " | Provider: " + jw_provider
 
 print('[DETAIL] Sending to Pushbullet')
-sys.stdout.flush()
-#os.environ['NZBPO_URL']="https://api.pushbullet.com/api/pushes"
-#os.environ['NZBPO_ACCESSTOKEN']="o.6mXC3GpZ33AgWCkgpwLdHIt750btnlNO"
+try:
+    client = Client(os.environ['NZBPO_USERKEY'], api_token=os.environ['NZBPO_APITOKEN'])
+    client.send_message(text, title="SearchProviders")
+    print('Sent to PushOver')
+except Exception as e:
+    print("Failed to send to PushOver")
 
-password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-password_mgr.add_password(None, os.environ['NZBPO_URL'], os.environ['NZBPO_ACCESSTOKEN'], '')
-handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-opener = urllib.request.build_opener(handler)
-opener.open(os.environ['NZBPO_URL'])
-urllib.request.install_opener(opener)
-values = {'title' : 'NZBGet - SearchProviders',
-           'body' : text,
-           'type' : 'note' }
-data = urllib.parse.urlencode(values).encode("utf-8")
-print(data)
-req = urllib.request.Request(os.environ['NZBPO_URL'], data)
-urllib.request.urlopen(req)
-print('Sent to Pushbullet')
 print("[NZB] MARK=BAD")
