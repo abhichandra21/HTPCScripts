@@ -26,9 +26,9 @@ import sys
 from os.path import dirname
 sys.path.insert(1,dirname(__file__) + '/lib')
 
-if os.environ.get('NZBNA_EVENT') not in ['NZB_ADDED']:
-    print("Not a valid NZBGET Event")
-    sys.exit(0)
+#if os.environ.get('NZBNA_EVENT') not in ['NZB_ADDED']:
+#    print("Not a valid NZBGET Event")
+#    sys.exit(0)
 
 import pprint
 import guessit
@@ -40,12 +40,18 @@ from tmdb_api import tmdb
 from justwatch import JustWatch
 from pushover import init, Client
 
+# NZBGet Exit Codes
+NZBGET_POSTPROCESS_PARCHECK = 92
+NZBGET_POSTPROCESS_SUCCESS = 93
+NZBGET_POSTPROCESS_ERROR = 94
+NZBGET_POSTPROCESS_NONE = 95
+
 #from dotenv import load_dotenv
 #load_dotenv(os.path.join('/opt/htpc-config/nzbget/scripts/nzbget.env'))
-env_var = os.environ
-print("User's Environment variable:")
-pprint.pprint(dict(env_var), width = 1)
-print("Starting SearchProviders PP Script")
+#env_var = os.environ
+#print("User's Environment variable:")
+#pprint.pprint(dict(env_var), width = 1)
+#print("Starting SearchProviders PP Script")
 
 def tmdbInfo(guessData):
     tmdb.configure(os.environ['NZBPO_TMDBAPIKEY'])
@@ -144,7 +150,7 @@ if jw_tmdbid == 0:
 print("Movie Title: %s | TMDB_ID: %s | Provider: %s" % (nzb_tmdbtitle, jw_tmdbid, jw_provider))
 text = "Movie Title: " + nzb_tmdbtitle + " | TMDB_ID: " + str(jw_tmdbid) + " | Provider: " + jw_provider
 
-print('[DETAIL] Sending to Pushbullet')
+print('[DETAIL] Sending to PushOver')
 try:
     client = Client(os.environ['NZBPO_USERKEY'], api_token=os.environ['NZBPO_APITOKEN'])
     client.send_message(text, title="SearchProviders")
