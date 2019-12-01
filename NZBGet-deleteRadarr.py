@@ -20,7 +20,7 @@
 #raport=7878
 
 # Radarr API key.
-#raapikey=38b9097ad5ba47de9f6e5b62b121486a
+#raapikey=
 
 # Radarr uses ssl (0, 1).
 #
@@ -33,7 +33,7 @@
 #raweb_root=radarr
 
 ## TMDB
-#tmdbapikey=45e408d2851e968e6e4d0353ce621c66
+#tmdbapikey=
 
 ### NZBGET POST-PROCESSING SCRIPT                                          ###
 ##############################################################################
@@ -51,9 +51,9 @@ from tmdb_api import tmdb
 
 #from dotenv import load_dotenv
 #load_dotenv(os.path.join('/opt/htpc-config/nzbget/scripts/nzbget.env'))
-env_var = os.environ
-print("User's Environment variable:")
-pprint.pprint(dict(env_var), width = 1)
+#env_var = os.environ
+#print("User's Environment variable:")
+#pprint.pprint(dict(env_var), width = 1)
 
 print("Starting PP Script")
 
@@ -120,39 +120,20 @@ if os.environ['NZBOP_VERSION'][0:5] < '11.0':
 
 print("Script triggered from NZBGet Version %s." % (str(os.environ['NZBOP_VERSION'])))
 status = 0
-if 'NZBPP_TOTALSTATUS' in os.environ:
-    if not os.environ['NZBPP_TOTALSTATUS'] == 'SUCCESS':
-        print("Download failed with status %s." % (os.environ['NZBPP_STATUS']))
-        status = 1
 
+print("NZBPP_DIRECTORY: %s | NZBPP_FINALDIR: %s | NZBPP_NZBNAME: %s | NZBPP_NZBFILENAME: %s | NZBPP_CATEGORY: %s | NZBPP_SCRIPTSTATUS: %s" % (os.environ['NZBPP_DIRECTORY'], os.environ['NZBPP_FINALDIR'],os.environ['NZBPP_NZBNAME'],os.environ['NZBPP_NZBFILENAME'],os.environ['NZBPP_CATEGORY'],os.environ['NZBPP_SCRIPTSTATUS'], ))
+
+success = os.environ['NZBPP_SCRIPTSTATUS'] == 'SUCCESS'
+if success:
+    print('Success for "%s"' % (os.environ['NZBPP_NZBNAME']))
 else:
-    # Check par status
-    if os.environ['NZBPP_PARSTATUS'] == '1' or os.environ['NZBPP_PARSTATUS'] == '4':
-        print("Par-repair failed, setting status \"failed\".")
-        status = 1
-
-    # Check unpack status
-    if os.environ['NZBPP_UNPACKSTATUS'] == '1':
-        print("Unpack failed, setting status \"failed\".")
-        status = 1
-
-    if os.environ['NZBPP_UNPACKSTATUS'] == '0' and os.environ['NZBPP_PARSTATUS'] == '0':
-        # Unpack was skipped due to nzb-file properties or due to errors during par-check
-
-        if os.environ['NZBPP_HEALTH'] < 1000:
-            print("Download health is compromised and Par-check/repair disabled or no .par2 files found. Setting status \"failed\".")
-            print("Please check your Par-check/repair settings for future downloads.")
-            status = 1
-
-        else:
-            print("Par-check/repair disabled or no .par2 files found, and Unpack not required. Health is ok so handle as though download successful.")
-            print("Please check your Par-check/repair settings for future downloads.")
+    print('Failure for "%s"' % (os.environ['NZBPP_NZBNAME']))
+    status = 1
 
 if os.environ['NZBPP_CATEGORY'] != 'Movies':
     print("This is only valid for Movies.")
     status = 1
 
-print("NZBPP_DIRECTORY: %s | NZBPP_FINALDIR: %s | NZBPP_NZBNAME: %s | NZBPP_NZBFILENAME: %s | NZBPP_CATEGORY: %s" % (os.environ['NZBPP_DIRECTORY'], os.environ['NZBPP_FINALDIR'],os.environ['NZBPP_NZBNAME'],os.environ['NZBPP_NZBFILENAME'],os.environ['NZBPP_CATEGORY'], ))
 # All checks done, now launching the script.
 if status == 1:
     sys.exit(NZBGET_POSTPROCESS_NONE)
@@ -189,7 +170,7 @@ for movie in radarrMovies.json():
 if radarr_id is not None and radarr_id != 0:
     deleteSession = requests.Session()
     deleteSession.trust_env = False
-    deleteMovies = deleteSession.delete('{0}/api/movie/{1}?apikey={2}'.format(radarr_url, radarr_id, radarr_key))
+    deleteMovies = deleteSession.delete('{0}/api/movie/{1}?apikey={2}&addExclusion=true'.format(radarr_url, radarr_id, radarr_key))
     if deleteMovies.status_code != 200:
         print('Radarr delete server error - response %s' % deleteMovies.status_code)
         sys.exit(NZBGET_POSTPROCESS_NONE)
