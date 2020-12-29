@@ -10,13 +10,34 @@
 ### OPTIONS                                                                ###
 
 ## TMDB
-#tmdbapikey=
+#TMDBAPIKEY=
 
 # PushOver UserKey
 #UserKey=
 
 # PushOver API-Token
 #APIToken=
+
+# Radarr host.
+#
+# The ipaddress for your Radarr server. e.g For the Same system use localhost or 127.0.0.1
+#rahost=localhost
+
+# Radarr port.
+#raport=7878
+
+# Radarr API key.
+#raapikey=38b9097ad5ba47de9f6e5b62b121486a
+
+# Radarr uses ssl (0, 1).
+#
+# Set to 1 if using ssl, else set to 0.
+#rassl=0
+
+# Radarr web_root
+#
+# set this if using a reverse proxy.
+#raweb_root=radarr
 
 ### NZBGET QUEUE SCRIPT                                          ###
 ##############################################################################
@@ -45,6 +66,12 @@ NZBGET_POSTPROCESS_PARCHECK = 92
 NZBGET_POSTPROCESS_SUCCESS = 93
 NZBGET_POSTPROCESS_ERROR = 94
 NZBGET_POSTPROCESS_NONE = 95
+
+radarr_host = os.environ['NZBPO_RAHOST']
+radarr_port = os.environ['NZBPO_RAPORT']
+radarr_webroot = os.environ['NZBPO_RAWEB_ROOT']
+radarr_ssl = os.environ['NZBPO_RASSL']
+radarr_key = os.environ['NZBPO_RAAPIKEY']
 
 #from dotenv import load_dotenv
 #load_dotenv(os.path.join('/opt/htpc-config/nzbget/scripts/nzbget.env'))
@@ -79,7 +106,7 @@ def tmdbInfo(guessData):
     return None
 
 # Check if all required script config options are present in config file
-required_options = ('NZBPO_TMDBAPIKEY', 'NZBPO_ACCESSTOKEN', 'NZBPO_URL')
+required_options = ('NZBPO_TMDBAPIKEY', 'NZBPO_USERKEY', 'NZBPO_APITOKEN', 'NZBPO_RAHOST', 'NZBPO_RAPORT', 'NZBPO_RAWEB_ROOT', 'NZBPO_RASSL', 'NZBPO_RAAPIKEY')
 status = 0
 
 if os.environ['NZBNA_CATEGORY'] != 'Movies':
@@ -96,6 +123,16 @@ if status == 1:
 
 nzb_tmdbid = 0
 nzb_tmdbtitle = ''
+radarr_id = 0
+radarr_title = ''
+
+if radarr_ssl == 1:
+    proto = 'https'
+else:
+    proto = 'http'
+
+radarr_url = proto + "://" + radarr_host + ":" + radarr_port + "/" + radarr_webroot
+print("Radarr URL: %s" % radarr_url)
 
 #os.environ['NZBPP_NZBFILENAME'] = "Captain.Marvel.2019.720p.BluRay.x264.IMAX-WHALES.nzb"
 guess = guessit.guess_movie_info(os.environ['NZBNA_FILENAME'])
@@ -140,6 +177,10 @@ for movie in movies['items']:
                         jw_provider = "Disney Plus"
                         #print("ProviderID: %s | Provider: %s | URL: %s" % (provider.get('provider_id'), jw_provider, provider.get('urls')['standard_web']))
                         break
+                    elif provider.get('provider_id') == 384:
+                        jw_provider = "HBO Max"
+                        #print("ProviderID: %s | Provider: %s | URL: %s" % (provider.get('provider_id'), jw_provider, provider.get('urls')['standard_web']))
+                        break
                 if jw_provider == None:
                     print("Could not determine Streaming Services")
                     sys.exit(NZBGET_POSTPROCESS_NONE)
@@ -157,5 +198,35 @@ try:
     print('Sent to PushOver')
 except Exception as e:
     print("Failed to send to PushOver")
+
+
+# Delete from Radarr
+print("Deleting from Radarr...")
+radarrSession = requests.Session()
+radarrSession.trust_env = False
+#print("%s/api/movie?apikey=%s" % (radarr_url, radarr_key))
+radarrMovies = radarrSession.get('{0}/api/movie?apikey={1}'.format(radarr_url, radarr_key))
+if radarrMovies.status_code != 200:
+    print('Radarr server error - response %s' % radarrMovies.status_code)
+    sys.exit(NZBGET_POSTPROCESS_NONE)
+for movie in radarrMovies.json():
+    tmdb_id = movie['tmdbId']
+    print("Processing Movie %s(%s)" % (movie['title'], movie['tmdbId']))
+    if nzb_tmdbid == movie['tmdbId']:
+        print('Got a match: %s[%s]' % (movie['title'],movie['id']))
+        radarr_id = movie['id']
+        radarr_title = movie['title']
+        break
+if radarr_id is not None and radarr_id != 0:
+    deleteSession = requests.Session()
+    deleteSession.trust_env = False
+    deleteMovies = deleteSession.delete('{0}/api/movie/{1}?apikey={2}&addExclusion=true'.format(radarr_url, radarr_id, radarr_key))
+    if deleteMovies.status_code != 200:
+        print('Radarr delete server error - response %s' % deleteMovies.status_code)
+        sys.exit(NZBGET_POSTPROCESS_NONE)
+    print("Successfully deleted %s" % radarr_title )
+else:
+    print("Movie not found in Radarr: [%s]" % (nzb_tmdbid))
+#curl -H 'Accept: application/json' -H 'Content-Type: application/json' -H 'X-Api-Key: 38b9097ad5ba47de9f6e5b62b121486a' -X GET http://127.0.0.1:7878/radarr/api/movie | jq '.[] | select(.tmdbId == 447365) | .id'
 
 print("[NZB] MARK=BAD")
